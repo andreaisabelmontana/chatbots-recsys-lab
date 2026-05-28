@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Chatbots & Recommendation Engines — Interactive Study Lab</title>
+<link rel="stylesheet" href="css/main.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" />
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+<aside id="sidebar">
+  <div class="brand">RecSys<br/><span>Interactive Lab</span></div>
+  <nav id="toc"></nav>
+  <div class="legend"><span class="dot ok"></span> click anything · drag sliders · everything updates live</div>
+</aside>
+
+<main id="content">
+
+<header class="hero">
+  <h1>Chatbots &amp; Recommendation Engines</h1>
+  <p class="lede">An interactive lab covering every core concept from the course — from utility functions to multi-armed bandits to production pipelines. Drag, click, sample, sweep. Watch the math change.</p>
+  <div class="hero-stats">
+    <div><b>12</b> chapters</div>
+    <div><b>25+</b> interactive demos</div>
+    <div><b>0</b> dependencies to install</div>
+  </div>
+</header>
+
+<!-- ========================================================== -->
+<section id="s1" data-title="1. Foundations">
+  <h2>1 · Foundations: The Utility Function</h2>
+  <p>A recommender learns $g:U\times I\to\mathbb{R}$ — a score for every (user, item) pair. For each user, pick the item that maximizes utility: $i^*_u = \arg\max_{i\in I} g(u,i)$.</p>
+
+  <div class="demo">
+    <h3>🎛 Interactive user-item utility matrix</h3>
+    <p class="hint">Click any cell to "rate" it. The system shows the row max (best item per user). Toggle the view to see a ranking vs a rating.</p>
+    <div class="controls">
+      <label>Users: <input type="range" id="utilU" min="3" max="10" value="6" /><span id="utilUv">6</span></label>
+      <label>Items: <input type="range" id="utilI" min="3" max="12" value="8" /><span id="utilIv">8</span></label>
+      <label><input type="checkbox" id="utilRank" /> show ranking (per row)</label>
+      <button id="utilRand">Randomize</button>
+    </div>
+    <div id="utilMatrix" class="matrix"></div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h4>ML Taxonomy</h4>
+      <table class="mini">
+        <tr><th>Paradigm</th><th>Input</th><th>Output</th></tr>
+        <tr><td>Classification</td><td>features X</td><td>categorical Y</td></tr>
+        <tr><td>Regression</td><td>features X</td><td>continuous Y</td></tr>
+        <tr><td><b>Recommendation</b></td><td><b>(user, item)</b></td><td><b>rating R</b></td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h4>Rating vs Ranking</h4>
+      <p><b>Rating:</b> predicts numeric utility, e.g. $g(u,i)=0.8$.<br/>
+      <b>Ranking:</b> orders items, e.g. $i_j \succ i_1 \succ i_2$.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ========================================================== -->
+<section id="s2" data-title="2. Recommender Types">
+  <h2>2 · The Five Recommender Families</h2>
+
+  <div class="demo">
+    <h3>🃏 Pick a strategy and see what it does</h3>
+    <div class="tabs" id="recTypeTabs">
+      <button data-tab="naive" class="active">Non-personalized</button>
+      <button data-tab="cb">Content-based</button>
+      <button data-tab="cf">Collaborative</button>
+      <button data-tab="hyb">Hybrid</button>
+      <button data-tab="ctx">Context-aware</button>
+    </div>
+    <div id="recTypeBody" class="rec-body"></div>
+  </div>
+
+  <div class="card">
+    <h4>Content-Based vs CF — Trade-offs</h4>
+    <table>
+      <tr><th></th><th>Content-Based</th><th>Collaborative Filtering</th></tr>
+      <tr><td><b>Data</b></td><td>Item metadata</td><td>Feedback only</td></tr>
+      <tr><td><b>Cold-start</b></td><td>Handles new items</td><td>❌ Fails on new users/items</td></tr>
+      <tr><td><b>Risk</b></td><td>Over-specialization (filter bubble)</td><td>Data sparsity, scalability</td></tr>
+      <tr><td><b>Transparency</b></td><td>✅ Explainable</td><td>Harder to explain</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ========================================================== -->
+<section id="s3" data-title="3. Feedback Types">
+  <h2>3 · Explicit vs Implicit Feedback</h2>
+  <p>Explicit signals (★ ratings, likes) are clear but sparse. Implicit signals (clicks, views, purchases) are abundant but ambiguous. A common bridge: map ordered implicit signals onto a rating scale.</p>
+
+  <div class="demo">
+    <h3>🔄 Implicit → Explicit converter</h3>
+    <p class="hint">Drag the bars to assign star ratings to each implicit signal. The example shows the default mapping.</p>
+    <div id="implicitMap"></div>
+  </div>
+</section>
+
+<!-- ========================================================== -->
+<section id="s4" data-title="4. Non-Personalized">
+  <h2>4 · Non-Personalized Recommenders</h2>
+  <p>Same recommendations for everyone. Two flavors: <b>Random</b> samples from $\mathcal{N}(\mu,\sigma)$ of training ratings, and <b>Popular</b> ranks by mean rating.</p>
+
+  <div class="demo">
+    <h3>🎲 Random vs Popular vs Bayesian-Average</h3>
+    <p class="hint">Bayesian average shrinks each item's mean toward the global mean proportional to how many ratings it has — fixing the "1 rating of 5.0 outranks 1M ratings averaging 4.9" problem.</p>
+    <div class="controls">
+      <label>Bayesian prior weight C: <input type="range" id="bayesC" min="0" max="200" value="20" /><span id="bayesCv">20</span></label>
+      <button id="popularReseed">Resample items</button>
+    </div>
+    <div id="popularChart"></div>
+    <p class="hint">Formula: $\bar{r}_i^{\text{Bayes}} = \dfrac{n_i\,\bar{r}_i + C\,\mu_{\text{global}}}{n_i + C}$</p>
+  </div>
+</section>
+
+<!-- ========================================================== -->
+<section id="s5" data-title="5. Metrics: Regression">
+  <h2>5 · Performance Metrics — Regression</h2>
+  <p>When predicting numeric ratings: MAE, MSE, RMSE, R². Drag the true and predicted ratings below to watch the errors update.</p>
+
+  <div class="demo">
+    <h3>📏 Live regression-metric calculator</h3>
+    <div id="regCalc"></div>
+  </div>
+</section>
+
+<!-- ========================================================== -->
+<section id="s6" data-title="6. Metrics: Classification">
+  <h2>6 · Performance Metrics — Classification</h2>
+  <p>When recommendations are binary (clicked / not-clicked): Precision, Recall, F1, Accuracy.</p>
+
+  <div class="demo">
+    <h3>🟦 Confusion-matrix sandbox</h3>
+    <p class="hint">Click cells to flip predictions. Precision/Recall/F1 update instantly.</p>
+    <div id="confusion"></div>
+  </div>
+
+  <div class="demo">
+    <h3>📈 ROC curve — drag the decision threshold</h3>
+    <p class="hint">Each item has a true label (relevant / not) and a model score. As you slide the threshold, items flip predicted class. Watch the confusion matrix, TPR, FPR, and the point on the ROC curve move.</p>
+    <div class="controls">
+      <label>Threshold τ: <input type="range" id="rocT" min="0" max="100" value="50" /><span id="rocTv">0.50</span></label>
+      <button id="rocReseed">New sample</button>
+    </div>
+    <div id="rocPanel"></div>
+  </div>
+</section>
+
+<!-- ========================================================== -->
+<section id="s7" data-title="7. Metrics: Ranking">
+  <h2>7 · Ranking Metrics — CG, DCG, NDCG, MRR, P@K</h2>
+  <p>CG sums relevance for top-K but ignores position. DCG discounts lower positions via $\log_2$. NDCG normalizes against an ideal ranking. MRR uses $1/\text{rank}$ of the first hit.</p>
+
+  <div class="demo">
+    <h3>🪜 Drag items to re-rank — DCG / NDCG / MRR / P@K update live</h3>
+    <p class="hint">Each item has a relevance score (green pill). Reorder by dragging. The ideal ranking (sorted by relevance) gives NDCG = 1.0.</p>
+    <div class="controls">
+      <label>K = <input type="range" id="ndcgK" min="1" max="10" value="5" /><span id="ndcgKv">5</span></label>
+      <button id="ndcgShuffle">Shuffle</button>
+      <button id="ndcgIdeal">Ideal order</button>
+    </div>
+    <div id="ndcgDemo"></div>
+    <div id="ndcgStats" class="metric-cards"></div>
+  </div>
+</section>
+
+<!-- ========================================================== -->
+<section id="s8" data-title="8. Beyond Accuracy">
+  <h2>8 · Beyond-Accuracy Metrics</h2>
+  <p><b>Coverage</b>: % of catalog ever recommended. <b>Personalization</b>: how different recs are across users. <b>Diversity (ILS)</b>: within-list category variety. <b>Novelty</b>: degree of unexpectedness.</p>
+
+  <div class="demo">
+    <h3>🌈 Diversity vs Coverage vs Personalization sandbox</h3>
+    <p class="hint">Toggle a "diversification" knob — see all four metrics shift.</p>
+    <div class="controls">
+      <label>Diversification λ: <input type="range" id="divLambda" min="0" max="100" value="20" /><span id="divLambdaV">0.2</span></label>
+      <label>Users: <input type="range" id="divUsers" min="5" max="50" value="20" /><span id="divUsersV">20</span></label>
+    </div>
+    <div id="diversityPanel"></div>
+  </div>
+</section>
+
+<!-- ========================================================== -->
+<section id="s9" data-title="9. Cosine Similarity">
+  <h2>9 · Cosine Similarity</h2>
+  <p>The angle between two rating vectors. Range $[0,1]$ for non-negative vectors. Works for both CF (user/item vectors) and content-based (TF-IDF/BERT vectors).</p>
+  <p>$\cos(\theta) = \dfrac{A\cdot B}{\lVert A\rVert\,\lVert B\rVert}$</p>
+
+  <div class="demo">
+    <h3>📐 Drag two 2D vectors — see the angle</h3>
+    <div id="cosineDemo"></div>
+  </div>
+</section>
+
+<!-- ========================================================== -->
+<section id="s10" data-title="10. CF: User-based / Item-based">
+  <h2>10 · Memory-Based Collaborative Filtering</h2>
+  <p><b>User-based:</b> find users with similar history, recommend what they liked. <b>Item-based:</b> find items similar to those the user already liked.</p>
+
+  <div class="demo">
+    <h3>👥 KNN-CF sandbox</h3>
+    <p class="hint">Click a row (user) or column (item) — the system highlights the K nearest neighbours (by cosine over rated cells) and predicts the missing cells.</p>
+    <div class="controls">
+      <label>K = <input type="range" id="knnK" min="1" max="5" value="2" /><span id="knnKv">2</span></label>
+      <label>Mode:
+        <select id="knnMode">
+          <option value="user">User-based</option>
+          <option value="item">Item-based</option>
+        </select>
+      </label>
+      <button id="knnReseed">New ratings</button>
+    </div>
+    <div id="knnMatrix" class="matrix"></div>
+    <div id="knnReport" class="card mt"></div>
+  </div>
+</section>
+
+<!-- ========================================================== -->
+<section id="s11" data-title="11. Matrix Factorization">
+  <h2>11 · Matrix Factorization &amp; SVD</h2>
+  <p>Decompose the sparse user-item matrix $R \approx U V^T$ into low-rank user and item factor matrices. SVD prediction with biases:</p>
+  <p>$\hat r_{ui} = \mu + b_u + b_i + q_i^T p_u$</p>
+
+  <div class="demo">
+    <h3>🧮 Train a tiny SVD live (gradient descent)</h3>
+    <p class="hint">Watch RMSE drop as the model fits. Adjust factors / learning rate / epochs and re-train.</p>
+    <div class="controls">
+      <label>n_factors: <input type="range" id="mfFactors" min="1" max="8" value="2" /><span id="mfFactorsV">2</span></label>
+      <label>lr: <input type="range" id="mfLr" min="1" max="50" value="10" /><span id="mfLrV">0.010</span></label>
+      <label>epochs: <input type="range" id="mfEpochs" min="10" max="500" value="100" /><span id="mfEpochsV">100</span></label>
+      <label>reg: <input type="range" id="mfReg" min="0" max="50" value="5" /><span id="mfRegV">0.05</span></label>
+      <button id="mfRun">▶ Train</button>
+    </div>
+    <div class="grid2">
+      <div id="mfMatrices"></div>
+      <div><canvas id="mfLoss" width="380" height="220"></canvas></div>
+    </div>
+  </div>
+</section>
+
+<!-- ========================================================== -->
+<section id="s12" data-title="12. Content-based: TF-IDF">
+  <h2>12 · Content-Based: BoW &amp; TF-IDF</h2>
+  <p>BoW counts words. TF-IDF weights them by how rare they are in the corpus: $\text{TF-IDF}(t,d) = \text{TF}(t,d)\cdot \log\dfrac{N}{|\{d:t\in d\}|}$</p>
+
+  <div class="demo">
+    <h3>📚 Type documents — see BoW &amp; TF-IDF matrices</h3>
+    <p class="hint">Edit any document. Vocabulary, BoW matrix, IDFs, and TF-IDF matrix recompute on every keystroke.</p>
+    <div id="tfidfDocs"></div>
+    <div id="tfidfPanel"></div>
+  </div>
+</section>
+
+<!-- ========================================================== -->
+<section id="s13" data-title="13. Embeddings & PCA">
+  <h2>13 · Embeddings &amp; PCA Visualization</h2>
+  <p>Word2Vec is static (one vector per word). BERT is contextual (vectors depend on context). High-dim embeddings can be projected to 2D with PCA.</p>
+
+  <div class="demo">
+    <h3>🧭 Mini embedding playground</h3>
+    <p class="hint">Toggle words; watch how clustering changes when "synonyms" are merged.</p>
+    <div id="pcaDemo"></div>
+  </div>
+
+  <div class="card">
+    <h4>Stemming vs Lemmatization</h4>
+    <table>
+      <tr><th>Stemming</th><th>Lemmatization</th></tr>
+      <tr><td>studies → studi</td><td>studies → study</td></tr>
+      <tr><td>organizations → organ</td><td>better → good</td></tr>
+      <tr><td>Rule-based, fast, may produce non-words</td><td>Context-aware NLP, slower, valid words</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ========================================================== -->
+<section id="s14" data-title="14. Hybrid Strategies">
+  <h2>14 · Hybrid Recommenders</h2>
+  <p>Combine recommenders to get the best of each. Three flavors: <b>Weighted</b>, <b>Switching</b>, <b>Mixed</b>.</p>
+
+  <div class="demo">
+    <h3>🎚 Weighted hybrid: drag the slider</h3>
+    <p>$\hat r_{ui} = w_1\cdot \text{CF}(u,i) + w_2 \cdot \text{CB}(u,i)$</p>
+    <div class="controls">
+      <label>w₁ (CF weight): <input type="range" id="hybW" min="0" max="100" value="60" /><span id="hybWv">0.60</span></label>
+    </div>
+    <div id="hybridChart"></div>
+  </div>
+
+  <div class="demo">
+    <h3>🪢 Mixed hybrid: rank aggregation</h3>
+    <p class="hint">Two recommenders rank items. We sum the rank scores to make a final list.</p>
+    <div id="mixedHybrid"></div>
+  </div>
+</section>
+
+<!-- ========================================================== -->
+<section id="s15" data-title="15. Context-Aware">
+  <h2>15 · Context-Aware Recommenders (CARS)</h2>
+  <p>2D RS: $g:U\times I \to \mathbb{R}$. CARS adds context: $g:U\times I\times C\to\mathbb{R}$.</p>
+
+  <div class="demo">
+    <h3>🧊 Pre-filter / Post-filter / Modeling — pick a paradigm</h3>
+    <div class="tabs" id="carsTabs">
+      <button data-tab="pre" class="active">Pre-Filtering</button>
+      <button data-tab="post">Post-Filtering</button>
+      <button data-tab="model">Contextual Modeling</button>
+    </div>
+    <div id="carsBody"></div>
+  </div>
+</section>
+
+<!-- ========================================================== -->
+<section id="s15b" data-title="15b. Splits & Cold-Start">
+  <h2>15b · Data Splits &amp; the Cold-Start Problem</h2>
+  <p>Pick a splitting scheme; see which users/items disappear from the training set, and which "cold" rows must fall back to a non-personalized model at serving time.</p>
+
+  <div class="demo">
+    <h3>✂️ Train/Test split visualizer + cold-start detector</h3>
+    <div class="controls">
+      <label>Method:
+        <select id="splitMethod">
+          <option value="random">Random 80/20</option>
+          <option value="stratified">Per-user stratified</option>
+          <option value="time">Time-series (past → future)</option>
+        </select>
+      </label>
+      <button id="splitReseed">Resample</button>
+    </div>
+    <div id="splitPanel"></div>
+  </div>
+</section>
+
+<!-- ========================================================== -->
+<section id="s16" data-title="16. Hyperparameter Tuning">
+  <h2>16 · Grid Search vs Bayesian Optimization</h2>
+  <p>Grid search tries every combination on a discrete grid. Bayesian optimization uses a probabilistic surrogate to <b>guess where to look next</b>.</p>
+
+  <div class="demo">
+    <h3>🔍 Search the same 2D loss surface with both methods</h3>
+    <p class="hint">Hidden loss surface (dark = low loss). Watch how Bayesian opt converges with far fewer evaluations.</p>
+    <div class="controls">
+      <button id="hpoGrid">Run Grid Search</button>
+      <button id="hpoBayes">Run Bayesian Opt</button>
+      <button id="hpoReset">Reset</button>
+    </div>
+    <div id="hpoPanel"></div>
+  </div>
+</section>
+
+<!-- ========================================================== -->
+<section id="s17" data-title="17. Bias & Feedback Loops">
+  <h2>17 · Bias &amp; the Feedback Loop</h2>
+  <p>Data collection → model learning → serving → user interaction → back to data. Each stage can introduce or amplify bias.</p>
+
+  <div class="demo">
+    <h3>♾ The feedback loop, visualized</h3>
+    <div id="loopDiagram"></div>
+  </div>
+
+  <div class="demo">
+    <h3>📉 Position-bias correction</h3>
+    <p class="hint">A higher position gets more clicks even if the item is no better. We correct via $R_i = P_{i,p}/P_p$.</p>
+    <div id="positionBias"></div>
+  </div>
+
+  <div class="card">
+    <h4>Bias zoo</h4>
+    <table>
+      <tr><th>Bias</th><th>Stage</th><th>Cause</th><th>Effect</th></tr>
+      <tr><td>Selection</td><td>user→data</td><td>users choose what to rate</td><td>MNAR data</td></tr>
+      <tr><td>Exposure</td><td>user→data</td><td>only shown subset</td><td>unseen ≠ negative</td></tr>
+      <tr><td>Conformity</td><td>user→data</td><td>peer-pressure rating</td><td>label drift</td></tr>
+      <tr><td>Position</td><td>user→data</td><td>top items click more</td><td>noisy positives</td></tr>
+      <tr><td>Popularity</td><td>model→user</td><td>algo + imbalance</td><td>rich-get-richer</td></tr>
+      <tr><td>Unfairness</td><td>model→user</td><td>imbalanced groups</td><td>discrimination</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ========================================================== -->
+<section id="s18" data-title="18. Multi-Armed Bandits">
+  <h2>18 · Multi-Armed Bandits — Explore vs Exploit</h2>
+  <p>Each item is an "arm" with an unknown reward distribution. Strategies decide whether to <b>exploit</b> the current best or <b>explore</b> uncertain alternatives.</p>
+
+  <div class="demo">
+    <h3>🎰 ε-Greedy live simulator</h3>
+    <p class="hint">Five arms with hidden true CTRs. ε% of pulls are random. Watch cumulative regret.</p>
+    <div class="controls">
+      <label>ε: <input type="range" id="egEps" min="0" max="100" value="10" /><span id="egEpsV">0.10</span></label>
+      <button id="egStep">+1 pull</button>
+      <button id="egRun">▶ +500</button>
+      <button id="egReset">Reset</button>
+    </div>
+    <div id="egPanel"></div>
+  </div>
+
+  <div class="demo">
+    <h3>🔔 Thompson Sampling — Beta-distribution playground</h3>
+    <p class="hint">Each arm gets a $\text{Beta}(\alpha,\beta)$ — successes $\alpha$, failures $\beta$. We sample from each distribution and pick the arm with the highest sample. Uncertainty drives exploration.</p>
+    <div class="controls">
+      <button id="tsStep">+1 round</button>
+      <button id="tsRun">▶ +200 rounds</button>
+      <button id="tsReset">Reset</button>
+    </div>
+    <div id="tsPanel"></div>
+  </div>
+</section>
+
+<!-- ========================================================== -->
+<section id="s19" data-title="19. Production Pipeline">
+  <h2>19 · Production Pipeline — Retrieval → Filter → Score → Order</h2>
+  <p>Production RS can't score billions of items at request time. The canonical 4-stage funnel narrows the candidate set while increasing compute per item.</p>
+
+  <div class="demo">
+    <h3>🧴 The funnel — click each stage</h3>
+    <div id="funnel"></div>
+  </div>
+
+  <div class="card">
+    <h4>Architecture latency types</h4>
+    <table>
+      <tr><th>Architecture</th><th>Behavior</th><th>Latency</th></tr>
+      <tr><td>Batch</td><td>Precomputed, cache lookup</td><td>~ms (but stale)</td></tr>
+      <tr><td>Real-time</td><td>Compute at request</td><td>Higher (model inference)</td></tr>
+      <tr><td>Multi-stage</td><td>Retrieval + ranking</td><td>Moderate</td></tr>
+      <tr><td>Hybrid</td><td>Precompute retrieval, real-time score</td><td>Moderate</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ========================================================== -->
+<section id="s20" data-title="20. Learning to Rank">
+  <h2>20 · Learning to Rank &amp; Future Directions</h2>
+  <p>Three formulations: <b>pointwise</b> (classify each item), <b>pairwise</b> (minimize inversions — BPR), <b>listwise</b> (optimize the whole list — RankALS, CLiMF).</p>
+
+  <div class="demo">
+    <h3>⚖️ Pointwise vs Pairwise vs Listwise — animated</h3>
+    <div id="ltrDemo"></div>
+  </div>
+
+  <div class="card">
+    <h4>Value-aware recommendations — beyond engagement</h4>
+    <p>Margin / revenue · content quality · long-term retention · fairness · content creation guidance. Single-objective CF is being replaced by multi-objective systems.</p>
+  </div>
+
+  <div class="card">
+    <h4>Netflix Prize takeaways</h4>
+    <ol>
+      <li>Temporal dynamics matter — user tastes drift.</li>
+      <li>User ratings are noisy and inconsistent.</li>
+      <li>Heterogeneous ensembles win benchmarks.</li>
+      <li>Offline gains (RMSE) ≠ production value — Netflix only shipped SVD++ + RBM.</li>
+    </ol>
+  </div>
+</section>
+
+<footer>
+  <p>Built from the <i>Chatbots &amp; Recommendation Engines</i> course study guide. No tracking, no cookies. All viz runs locally.</p>
+</footer>
+
+</main>
+
+<script src="js/viz.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
