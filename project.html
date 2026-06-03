@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Worked Example Project — Movie Recommender + Intent Chatbot</title>
+<link rel="stylesheet" href="css/main.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" />
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+/* ---- project.html–specific layout (extends main.css, same palette) ---- */
+.topnav{position:sticky;top:0;z-index:20;display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;
+  background:rgba(11,16,32,.86);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);
+  padding:12px 0;margin:-28px 0 0;font-size:13px;}
+.topnav a{color:var(--ink-dim);text-decoration:none;padding:5px 10px;border-radius:7px;}
+.topnav a:hover{color:var(--ink);background:var(--panel);}
+.topnav a.home{color:var(--ink);background:var(--panel2);border:1px solid var(--line);}
+.topnav a.pdf{color:var(--accent2);border:1px solid var(--line);}
+.topnav .sp{flex:1;}
+
+/* code blocks (scoped — not in main.css) */
+pre{background:var(--bg2);border:1px solid var(--line);border-left:3px solid var(--accent);
+  border-radius:10px;padding:15px 18px;overflow-x:auto;margin:14px 0;font-size:12.5px;line-height:1.5;}
+pre code{font-family:var(--mono);color:var(--ink);white-space:pre;}
+code.inline{font-family:var(--mono);font-size:.92em;background:var(--bg2);border:1px solid var(--line);
+  border-radius:5px;padding:1px 6px;color:var(--accent);}
+.cap{font-size:12px;color:var(--ink-dim);margin:4px 0 0;font-style:italic;}
+/* token coloring */
+pre .k{color:var(--accent2);} pre .s{color:var(--good);} pre .c{color:var(--ink-dim);font-style:italic;}
+pre .n{color:var(--warn);} pre .f{color:var(--accent);}
+
+.steps{display:grid;gap:10px;margin:16px 0;}
+.step{background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--accent);
+  border-radius:8px;padding:11px 15px;}
+.step b{color:var(--accent);}
+.tag-row{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0;}
+.tag-row .t{font-family:var(--mono);font-size:11px;padding:3px 10px;border-radius:999px;
+  background:rgba(122,162,255,.14);color:var(--accent);border:1px solid rgba(122,162,255,.3);}
+.tag-row .t.py{background:rgba(110,231,183,.12);color:var(--good);border-color:rgba(110,231,183,.3);}
+.demolinks{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0 0;}
+.demolinks a{font-size:12px;font-family:var(--mono);text-decoration:none;padding:3px 10px;border-radius:999px;
+  background:rgba(110,231,183,.12);color:var(--good);border:1px solid rgba(110,231,183,.3);}
+.demolinks a:hover{background:var(--good);color:#0b1020;}
+.demolinks .lbl{font-size:11px;color:var(--ink-dim);align-self:center;text-transform:uppercase;letter-spacing:.5px;}
+.callout{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--warn);
+  border-radius:8px;padding:13px 16px;margin:14px 0;font-size:13.5px;color:var(--ink);}
+.callout b{color:var(--warn);}
+.formula{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 16px;margin:11px 0;overflow-x:auto;}
+.worked{background:rgba(122,162,255,.08);border:1px solid var(--accent);border-radius:8px;
+  padding:11px 15px;margin:12px 0;font-size:13.5px;}
+.worked b{color:var(--accent);}
+.lo-table td:first-child{font-family:var(--mono);font-size:12px;color:var(--accent2);white-space:nowrap;}
+.bib{display:grid;gap:12px;margin:14px 0;}
+.bib .ref{background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:13px 16px;}
+.bib .ref .ti{font-weight:600;color:var(--ink);}
+.bib .ref .meta{font-size:12px;color:var(--ink-dim);font-family:var(--mono);margin:3px 0;}
+.bib .ref .why{font-size:13px;color:var(--ink-dim);margin-top:5px;}
+.chat{max-width:560px;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:14px;margin:12px 0;}
+.chat .msg{margin:7px 0;display:flex;gap:8px;}
+.chat .msg .who{font-family:var(--mono);font-size:11px;color:var(--ink-dim);min-width:46px;text-transform:uppercase;}
+.chat .msg.u .bub{background:var(--panel2);}
+.chat .msg.b .bub{background:rgba(122,162,255,.12);border:1px solid rgba(122,162,255,.3);}
+.chat .bub{padding:7px 12px;border-radius:9px;font-size:13.5px;border:1px solid var(--line);}
+section h2 .anchor{font-size:13px;font-weight:400;color:var(--ink-dim);margin-left:8px;}
+</style>
+</head>
+<body>
+<aside id="sidebar">
+  <div class="brand">RecSys<br/><span>Worked Project</span></div>
+  <a href="./index.html" style="display:block;margin:0 0 8px;padding:7px 10px;border-radius:7px;font-size:13px;text-decoration:none;color:#0b1020;background:linear-gradient(135deg,#7aa2ff,#ff8fb1);font-weight:600;">🎛 Interactive demos →</a>
+  <a href="./course.html" style="display:block;margin:0 0 14px;padding:7px 10px;border-radius:7px;font-size:13px;text-decoration:none;color:var(--ink);background:var(--panel2);border:1px solid var(--line);font-weight:600;">📋 Course outline →</a>
+  <nav id="toc">
+    <a href="#overview">1 · Overview</a>
+    <a href="#data">2 · Data &amp; problem</a>
+    <a href="#cf">3 · Collaborative filtering</a>
+    <a href="#mf">4 · Matrix factorization (SGD)</a>
+    <a href="#eval">5 · Evaluation &amp; results</a>
+    <a href="#chatbot">6 · Cold-start + chatbot</a>
+    <a href="#outcomes">7 · Learning outcomes</a>
+    <a href="#extensions">8 · Extensions</a>
+    <a href="#references">9 · References</a>
+  </nav>
+  <div class="legend"><span class="dot ok"></span> a single end-to-end build · real Python · grounded in the syllabus</div>
+</aside>
+
+<main id="content">
+
+<nav class="topnav">
+  <a class="home" href="./index.html">&larr; Interactive demos</a>
+  <a href="./course.html">Course outline</a>
+  <a href="#overview">Overview</a>
+  <a href="#cf">CF</a>
+  <a href="#mf">MF</a>
+  <a href="#eval">Evaluation</a>
+  <a href="#chatbot">Chatbot</a>
+  <a href="#references">References</a>
+  <span class="sp"></span>
+  <a class="pdf" href="./SYLLABUS.pdf" target="_blank" rel="noopener">Official syllabus PDF ↗</a>
+</nav>
+
+<header class="hero">
+  <h1>Worked Example: A Movie Recommender</h1>
+  <p class="lede">One project, end to end. We build a MovieLens-style recommender in Python — memory-based collaborative filtering, matrix factorization trained with SGD, a content-based cold-start fallback, and a small intent chatbot that turns a natural-language request into recommendations. Every formula is worked by hand and matched to runnable code.</p>
+  <div class="hero-stats">
+    <div><b>4</b> models built</div>
+    <div><b>3</b> metrics (RMSE, P@K, NDCG)</div>
+    <div><b>Python</b> numpy · pandas</div>
+  </div>
+</header>
+
+<!-- ========================================================== -->
+<section id="overview" data-title="1. Overview">
+  <h2>1 · Overview <span class="anchor">goal, sessions exercised, stack</span></h2>
+  <p>The syllabus states a concrete deliverable: <i>"Students will learn to build an end-to-end recommendation solution using Python at the level that is required in a large company."</i> This page is exactly that build, written so you can copy each block into a notebook and run it.</p>
+
+  <p><b>Goal.</b> Given a sparse table of user × movie ratings, predict the rating a user would give an unseen movie, then return a ranked top-$K$ list. We train and compare four models, evaluate them with one error metric and two ranking metrics, handle users/items with no history, and wrap the whole thing behind a tiny chatbot.</p>
+
+  <div class="step"><b>Pipeline.</b> load &amp; split → memory-based CF (user / item) → matrix factorization (SGD with biases) → evaluate (RMSE, Precision@K, NDCG) → cold-start content fallback → intent chatbot front-end.</div>
+
+  <p><b>Sessions exercised</b> (see the <a href="./course.html#program">full program</a>):</p>
+  <div class="tag-row">
+    <span class="t">S3 · Data in RS</span>
+    <span class="t">S4 · Algorithms overview</span>
+    <span class="t">S5 · Evaluation &amp; model selection</span>
+    <span class="t">S9 · Python practices</span>
+    <span class="t">S11 · Similarity methods</span>
+    <span class="t">S12 · Matrix factorization</span>
+    <span class="t">S13 · Applying ML to RS</span>
+    <span class="t">S14 · MLOps</span>
+    <span class="t">S20 · Intro to chatbots</span>
+    <span class="t">S22 · LLMs</span>
+  </div>
+
+  <p><b>Stack.</b></p>
+  <div class="tag-row">
+    <span class="t py">Python 3.11</span>
+    <span class="t py">numpy</span>
+    <span class="t py">pandas</span>
+    <span class="t py">scikit-learn (metrics, TF-IDF)</span>
+    <span class="t py">scipy.sparse</span>
+    <span class="t py">surprise / implicit (optional)</span>
+  </div>
+
+  <div class="demolinks"><span class="lbl">Play with the underlying ideas:</span>
+    <a href="./index.html#s10">KNN-CF sandbox</a>
+    <a href="./index.html#s11">Train a tiny SVD</a>
+    <a href="./index.html#s7">NDCG / P@K</a>
+    <a href="./index.html#s12">TF-IDF</a>
+    <a href="./index.html#s15b">Cold-start detector</a>
+  </div>
+</section>
+
+<!-- ========================================================== -->
+<section id="data" data-title="2. Data & problem">
+  <h2>2 · Data &amp; the problem setup <span class="anchor">MovieLens-style</span></h2>
+  <p>We use the classic MovieLens 100K shape: a long table of <code class="inline">(userId, movieId, rating, timestamp)</code> with explicit 1–5 star ratings, plus a movie table carrying titles and genres. Ratings are <b>sparse</b> — most (user, item) cells are unobserved. That sparsity is the whole challenge.</p>
+
+  <pre><code><span class="k">import</span> numpy <span class="k">as</span> np
+<span class="k">import</span> pandas <span class="k">as</span> pd
+
+<span class="c"># MovieLens 100K: ratings + movie metadata (genres are pipe-separated)</span>
+ratings = pd.read_csv(<span class="s">"u.data"</span>, sep=<span class="s">"\t"</span>,
+                      names=[<span class="s">"userId"</span>, <span class="s">"movieId"</span>, <span class="s">"rating"</span>, <span class="s">"ts"</span>])
+movies  = pd.read_csv(<span class="s">"u.item"</span>, sep=<span class="s">"|"</span>, encoding=<span class="s">"latin-1"</span>,
+                      names=[<span class="s">"movieId"</span>, <span class="s">"title"</span>] + [<span class="s">f"g{i}"</span> <span class="k">for</span> i <span class="k">in</span> range(<span class="n">22</span>)],
+                      usecols=range(<span class="n">24</span>))
+
+n_users  = ratings.userId.nunique()
+n_items  = ratings.movieId.nunique()
+density  = len(ratings) / (n_users * n_items)
+<span class="f">print</span>(<span class="s">f"{n_users} users x {n_items} items, density={density:.3%}"</span>)
+<span class="c"># -&gt; 943 users x 1682 items, density=6.305%   (93.7% of cells are empty)</span></code></pre>
+
+  <p>We split <b>per user, by time</b> — each user's earliest 80% of ratings train the model, the latest 20% are held out. This is the realistic "predict the future from the past" split and it surfaces cold-start naturally (a test movie may never appear in training). Try the three split schemes in the <a href="./index.html#s15b">split visualizer</a>.</p>
+
+  <pre><code><span class="k">def</span> <span class="f">time_split</span>(ratings, test_frac=<span class="n">0.2</span>):
+    <span class="s">"""Leave the most recent `test_frac` of each user's history for test."""</span>
+    train_parts, test_parts = [], []
+    <span class="k">for</span> _, grp <span class="k">in</span> ratings.groupby(<span class="s">"userId"</span>):
+        grp = grp.sort_values(<span class="s">"ts"</span>)
+        cut = int(len(grp) * (<span class="n">1</span> - test_frac))
+        train_parts.append(grp.iloc[:cut])
+        test_parts.append(grp.iloc[cut:])
+    <span class="k">return</span> pd.concat(train_parts), pd.concat(test_parts)
+
+train, test = time_split(ratings)
+
+<span class="c"># Build a dense user x item matrix from the training rows (0 = unobserved).</span>
+<span class="c"># Map raw ids -&gt; contiguous indices so they address rows/cols directly.</span>
+uid = {u: i <span class="k">for</span> i, u <span class="k">in</span> enumerate(train.userId.unique())}
+iid = {m: j <span class="k">for</span> j, m <span class="k">in</span> enumerate(train.movieId.unique())}
+R = np.zeros((len(uid), len(iid)))
+<span class="k">for</span> r <span class="k">in</span> train.itertuples():
+    R[uid[r.userId], iid[r.movieId]] = r.rating</code></pre>
+
+  <div class="callout"><b>Watch the leakage.</b> The id maps and every statistic (means, IDF, factors) are built from <code class="inline">train</code> only. A test movie or user missing from these maps is a genuine cold-start case handled in §6 — not something to paper over by fitting on all the data.</div>
+</section>
+
+<!-- ========================================================== -->
+<section id="cf" data-title="3. Collaborative filtering">
+  <h2>3 · Memory-based collaborative filtering <span class="anchor">user &amp; item</span></h2>
+  <p>The first model needs no training: predict from <b>neighbours</b>. Represent each user (or item) as its row (or column) of $R$ and measure closeness with <b>cosine similarity</b>:</p>
+
+  <div class="formula">$$\operatorname{sim}(a,b)=\cos(\theta)=\frac{\mathbf{a}\cdot\mathbf{b}}{\lVert\mathbf{a}\rVert\,\lVert\mathbf{b}\rVert}=\frac{\sum_i a_i b_i}{\sqrt{\sum_i a_i^2}\,\sqrt{\sum_i b_i^2}}$$</div>
+
+  <div class="worked"><b>Tiny worked example.</b> Two users over three movies: $\mathbf{a}=(5,3,0)$, $\mathbf{b}=(4,0,0)$. Dot product $=5\cdot4+3\cdot0+0\cdot0=20$. Norms $\lVert\mathbf{a}\rVert=\sqrt{34}\approx5.83$, $\lVert\mathbf{b}\rVert=\sqrt{16}=4$. So $\cos\theta=\dfrac{20}{5.83\cdot4}=\dfrac{20}{23.32}\approx \mathbf{0.858}$ — high overlap on the one movie they share. Reorder vectors and angles live in the <a href="./index.html#s9">cosine demo</a>.</div>
+
+  <p><b>User-based</b> prediction is a similarity-weighted, mean-centered average over the $k$ nearest users who rated item $i$ — centering removes each user's personal "everything is a 4" bias:</p>
+
+  <div class="formula">$$\hat r_{ui}=\bar r_u+\frac{\displaystyle\sum_{v\in N_k(u)}\operatorname{sim}(u,v)\,(r_{vi}-\bar r_v)}{\displaystyle\sum_{v\in N_k(u)}\bigl|\operatorname{sim}(u,v)\bigr|}$$</div>
+
+  <pre><code><span class="k">from</span> sklearn.metrics.pairwise <span class="k">import</span> cosine_similarity
+
+<span class="k">def</span> <span class="f">mean_center</span>(R):
+    <span class="c"># per-user mean over RATED cells only (zeros are "missing", not 0-star)</span>
+    mask = R &gt; <span class="n">0</span>
+    counts = mask.sum(axis=<span class="n">1</span>)
+    sums   = R.sum(axis=<span class="n">1</span>)
+    means  = np.divide(sums, counts, out=np.zeros_like(sums), where=counts &gt; <span class="n">0</span>)
+    Rc = np.where(mask, R - means[:, <span class="k">None</span>], <span class="n">0.0</span>)
+    <span class="k">return</span> Rc, means
+
+Rc, user_mean = mean_center(R)
+S = cosine_similarity(Rc)          <span class="c"># (n_users x n_users), centered cosine = Pearson</span>
+np.fill_diagonal(S, <span class="n">0.0</span>)          <span class="c"># a user is not its own neighbour</span>
+
+<span class="k">def</span> <span class="f">predict_user_based</span>(u, i, k=<span class="n">30</span>):
+    rated_by = np.where(R[:, i] &gt; <span class="n">0</span>)[<span class="n">0</span>]          <span class="c"># users who rated item i</span>
+    <span class="k">if</span> rated_by.size == <span class="n">0</span>:
+        <span class="k">return</span> user_mean[u]                      <span class="c"># no signal -&gt; fall back to mean</span>
+    sims = S[u, rated_by]
+    top  = rated_by[np.argsort(-sims)[:k]]        <span class="c"># k nearest who rated i</span>
+    w    = S[u, top]
+    denom = np.abs(w).sum()
+    <span class="k">if</span> denom == <span class="n">0</span>:
+        <span class="k">return</span> user_mean[u]
+    <span class="k">return</span> user_mean[u] + (w * Rc[top, i]).sum() / denom</code></pre>
+
+  <p><b>Item-based</b> CF flips the geometry: similarity between item columns, prediction from the items <i>this</i> user already rated. It is usually more stable in production because item–item similarities drift slowly and can be precomputed offline (an <a href="./course.html#program">MLOps, S14</a> concern).</p>
+
+  <pre><code>SI = cosine_similarity(Rc.T)        <span class="c"># (n_items x n_items)</span>
+np.fill_diagonal(SI, <span class="n">0.0</span>)
+
+<span class="k">def</span> <span class="f">predict_item_based</span>(u, i, k=<span class="n">30</span>):
+    rated = np.where(R[u] &gt; <span class="n">0</span>)[<span class="n">0</span>]               <span class="c"># items u has rated</span>
+    <span class="k">if</span> rated.size == <span class="n">0</span>:
+        <span class="k">return</span> user_mean[u]
+    sims = SI[i, rated]
+    top  = rated[np.argsort(-sims)[:k]]
+    w    = SI[i, top]
+    denom = np.abs(w).sum()
+    <span class="k">if</span> denom == <span class="n">0</span>:
+        <span class="k">return</span> user_mean[u]
+    <span class="c"># item-based: center by item means is common; here we reuse user_mean for parity</span>
+    <span class="k">return</span> user_mean[u] + (w * Rc[u, top]).sum() / denom</code></pre>
+
+  <div class="callout"><b>Why this is only the baseline.</b> Memory-based CF stores an $O(n^2)$ similarity matrix and degrades on extreme sparsity — exactly the failure modes the syllabus flags. Matrix factorization fixes both by learning a small dense representation.</div>
+
+  <div class="demolinks"><span class="lbl">Related demos:</span>
+    <a href="./index.html#s9">Cosine similarity</a>
+    <a href="./index.html#s10">User vs item KNN-CF</a>
+    <a href="./course.html#program">Session 11</a>
+  </div>
+</section>
+
+<!-- ========================================================== -->
+<section id="mf" data-title="4. Matrix factorization">
+  <h2>4 · Matrix factorization with SGD <span class="anchor">the workhorse</span></h2>
+  <p>Approximate the rating matrix by a low-rank product, $R \approx P\,Q^{\top}$, where row $\mathbf{p}_u\in\mathbb{R}^f$ is a user's latent taste and $\mathbf{q}_i\in\mathbb{R}^f$ is an item's latent profile. Adding biases (the <b>SVD model</b> popularized in the Netflix Prize) gives the prediction:</p>
+
+  <div class="formula">$$\hat r_{ui}=\mu+b_u+b_i+\mathbf{q}_i^{\top}\mathbf{p}_u$$</div>
+
+  <p>We fit it by minimizing regularized squared error over the <b>observed</b> ratings $\mathcal{K}$:</p>
+
+  <div class="formula">$$\min_{P,Q,b}\;\sum_{(u,i)\in\mathcal{K}}\Bigl(r_{ui}-\hat r_{ui}\Bigr)^{2}+\lambda\Bigl(\lVert\mathbf{p}_u\rVert^{2}+\lVert\mathbf{q}_i\rVert^{2}+b_u^{2}+b_i^{2}\Bigr)$$</div>
+
+  <p>Stochastic gradient descent visits one observed rating at a time, computes the error $e_{ui}=r_{ui}-\hat r_{ui}$, and steps every parameter against its gradient (learning rate $\gamma$):</p>
+
+  <div class="formula">$$
+  \begin{aligned}
+  b_u &\leftarrow b_u+\gamma\,(e_{ui}-\lambda b_u) &\qquad
+  b_i &\leftarrow b_i+\gamma\,(e_{ui}-\lambda b_i)\\[4pt]
+  \mathbf{p}_u &\leftarrow \mathbf{p}_u+\gamma\,(e_{ui}\,\mathbf{q}_i-\lambda\,\mathbf{p}_u) &\qquad
+  \mathbf{q}_i &\leftarrow \mathbf{q}_i+\gamma\,(e_{ui}\,\mathbf{p}_u-\lambda\,\mathbf{q}_i)
+  \end{aligned}$$</div>
+
+  <div class="worked"><b>One SGD step, by hand.</b> Let $\mu=3.5$, $b_u=0.2$, $b_i=-0.1$, $\mathbf{p}_u=(0.1,0.2)$, $\mathbf{q}_i=(0.3,0.1)$. Then $\mathbf{q}_i^{\top}\mathbf{p}_u=0.3\cdot0.1+0.1\cdot0.2=0.05$, so $\hat r_{ui}=3.5+0.2-0.1+0.05=3.65$. If the true rating is $5$, the error is $e=5-3.65=1.35$. With $\gamma=0.01,\lambda=0.05$ the user vector moves $\mathbf{p}_u\!\leftarrow\!\mathbf{p}_u+0.01\,(1.35\cdot\mathbf{q}_i-0.05\,\mathbf{p}_u)=(0.10405,0.20335)$ — a small nudge toward the item factor.</div>
+
+  <pre><code><span class="k">class</span> <span class="f">MatrixFactorization</span>:
+    <span class="k">def</span> <span class="f">__init__</span>(self, n_users, n_items, f=<span class="n">40</span>, lr=<span class="n">0.01</span>, reg=<span class="n">0.05</span>,
+                 epochs=<span class="n">30</span>, seed=<span class="n">0</span>):
+        rng = np.random.default_rng(seed)
+        self.P  = rng.normal(<span class="n">0</span>, <span class="n">0.1</span>, (n_users, f))
+        self.Q  = rng.normal(<span class="n">0</span>, <span class="n">0.1</span>, (n_items, f))
+        self.bu = np.zeros(n_users)
+        self.bi = np.zeros(n_items)
+        self.lr, self.reg, self.epochs = lr, reg, epochs
+
+    <span class="k">def</span> <span class="f">fit</span>(self, samples):                <span class="c"># samples: list of (u, i, r)</span>
+        self.mu = np.mean([r <span class="k">for</span> _, _, r <span class="k">in</span> samples])
+        <span class="k">for</span> epoch <span class="k">in</span> range(self.epochs):
+            np.random.shuffle(samples)
+            sse = <span class="n">0.0</span>
+            <span class="k">for</span> u, i, r <span class="k">in</span> samples:
+                pred = self.mu + self.bu[u] + self.bi[i] + self.P[u] @ self.Q[i]
+                e = r - pred
+                sse += e * e
+                <span class="c"># update biases</span>
+                self.bu[u] += self.lr * (e - self.reg * self.bu[u])
+                self.bi[i] += self.lr * (e - self.reg * self.bi[i])
+                <span class="c"># update factors (copy P[u] so Q uses the pre-update value)</span>
+                pu = self.P[u].copy()
+                self.P[u] += self.lr * (e * self.Q[i] - self.reg * self.P[u])
+                self.Q[i] += self.lr * (e * pu       - self.reg * self.Q[i])
+            <span class="f">print</span>(<span class="s">f"epoch {epoch:2d}  train RMSE={np.sqrt(sse/len(samples)):.4f}"</span>)
+        <span class="k">return</span> self
+
+    <span class="k">def</span> <span class="f">predict</span>(self, u, i):
+        <span class="k">return</span> self.mu + self.bu[u] + self.bi[i] + self.P[u] @ self.Q[i]
+
+samples = [(uid[r.userId], iid[r.movieId], r.rating) <span class="k">for</span> r <span class="k">in</span> train.itertuples()]
+mf = MatrixFactorization(len(uid), len(iid), f=<span class="n">40</span>, epochs=<span class="n">30</span>).fit(samples)</code></pre>
+
+  <p>Watch RMSE fall epoch-by-epoch and sweep <code class="inline">f</code>, <code class="inline">lr</code>, <code class="inline">reg</code> interactively in the <a href="./index.html#s11">live SVD trainer</a>. For production you would swap this teaching loop for a tuned library:</p>
+
+  <pre><code><span class="c"># Drop-in production equivalent (explicit ratings):</span>
+<span class="k">from</span> surprise <span class="k">import</span> SVD, Dataset, Reader, accuracy
+<span class="k">from</span> surprise.model_selection <span class="k">import</span> train_test_split
+
+data = Dataset.load_from_df(train[[<span class="s">"userId"</span>, <span class="s">"movieId"</span>, <span class="s">"rating"</span>]],
+                            Reader(rating_scale=(<span class="n">1</span>, <span class="n">5</span>)))
+algo = SVD(n_factors=<span class="n">40</span>, n_epochs=<span class="n">30</span>, lr_all=<span class="n">0.01</span>, reg_all=<span class="n">0.05</span>)
+algo.fit(data.build_full_trainset())
+<span class="c"># For implicit feedback (clicks/plays) use ALS instead: `implicit.als.AlternatingLeastSquares`</span></code></pre>
+</section>
+
+<!-- ========================================================== -->
+<section id="eval" data-title="5. Evaluation">
+  <h2>5 · Evaluation <span class="anchor">RMSE · Precision@K · NDCG</span></h2>
+  <p>Rating accuracy and ranking quality are different questions. We report one of each.</p>
+
+  <h3 style="margin-top:18px;">5.1 · RMSE — did we predict the number?</h3>
+  <div class="formula">$$\mathrm{RMSE}=\sqrt{\frac{1}{|\mathcal{T}|}\sum_{(u,i)\in\mathcal{T}}\bigl(r_{ui}-\hat r_{ui}\bigr)^{2}}$$</div>
+  <div class="worked"><b>Worked.</b> Predictions vs truth on three test ratings: errors $(\hat r-r)=(+0.5,-1.0,+0.5)$. Squared: $0.25,1.0,0.25$; mean $=1.5/3=0.5$; $\mathrm{RMSE}=\sqrt{0.5}\approx\mathbf{0.707}$. RMSE punishes the one big miss more than the two small ones — that is the squared term at work.</div>
+
+  <pre><code><span class="k">def</span> <span class="f">rmse_on</span>(test, predict):
+    errs = []
+    <span class="k">for</span> r <span class="k">in</span> test.itertuples():
+        <span class="k">if</span> r.userId <span class="k">in</span> uid <span class="k">and</span> r.movieId <span class="k">in</span> iid:   <span class="c"># skip cold rows (see §6)</span>
+            errs.append(r.rating - predict(uid[r.userId], iid[r.movieId]))
+    errs = np.array(errs)
+    <span class="k">return</span> float(np.sqrt(np.mean(errs ** <span class="n">2</span>)))</code></pre>
+
+  <h3 style="margin-top:18px;">5.2 · Precision@K — are the top-K relevant?</h3>
+  <p>Call a held-out movie <b>relevant</b> if the user actually rated it $\ge 4$. Precision@K is the fraction of the recommended top-$K$ that are relevant:</p>
+  <div class="formula">$$\mathrm{Precision@K}=\frac{|\{\text{top-}K\text{ recommended}\}\cap\{\text{relevant}\}|}{K}$$</div>
+  <div class="worked"><b>Worked.</b> Top-5 list, relevance pattern $[1,0,1,1,0]$ (3 hits in 5). $\mathrm{Precision@5}=3/5=\mathbf{0.60}$.</div>
+
+  <h3 style="margin-top:18px;">5.3 · NDCG@K — are the relevant ones near the top?</h3>
+  <p>Precision ignores order; NDCG rewards placing relevant items high via a logarithmic position discount, then normalizes by the ideal ordering so the score lands in $[0,1]$:</p>
+  <div class="formula">$$\mathrm{DCG@K}=\sum_{p=1}^{K}\frac{2^{\,rel_p}-1}{\log_2(p+1)},\qquad \mathrm{NDCG@K}=\frac{\mathrm{DCG@K}}{\mathrm{IDCG@K}}$$</div>
+  <div class="worked"><b>Worked (binary relevance, K=3).</b> Our ranking has relevances $[1,0,1]$. With $2^{rel}-1\in\{0,1\}$ the gains are $[1,0,1]$ and discounts $\log_2(p{+}1)=[\log_2 2,\log_2 3,\log_2 4]=[1.000,1.585,2.000]$.<br/>
+  $\mathrm{DCG}=\dfrac{1}{1.000}+\dfrac{0}{1.585}+\dfrac{1}{2.000}=1.500$. The ideal order $[1,1,0]$ gives $\mathrm{IDCG}=\dfrac{1}{1.000}+\dfrac{1}{1.585}=1.631$. So $\mathrm{NDCG@3}=\dfrac{1.500}{1.631}\approx\mathbf{0.920}$. Drag items to re-rank and watch this move in the <a href="./index.html#s7">NDCG demo</a>.</div>
+
+  <pre><code><span class="k">def</span> <span class="f">dcg</span>(rels):
+    rels = np.asarray(rels, dtype=float)
+    discounts = np.log2(np.arange(<span class="n">2</span>, rels.size + <span class="n">2</span>))   <span class="c"># log2(p+1), p=1..K</span>
+    <span class="k">return</span> float(((<span class="n">2</span> ** rels - <span class="n">1</span>) / discounts).sum())
+
+<span class="k">def</span> <span class="f">ndcg_at_k</span>(ranked_rels, k):
+    ideal = sorted(ranked_rels, reverse=<span class="k">True</span>)
+    idcg  = dcg(ideal[:k])
+    <span class="k">return</span> dcg(ranked_rels[:k]) / idcg <span class="k">if</span> idcg &gt; <span class="n">0</span> <span class="k">else</span> <span class="n">0.0</span>
+
+<span class="k">def</span> <span class="f">ranking_metrics</span>(predict, test, k=<span class="n">10</span>, thresh=<span class="n">4.0</span>):
+    <span class="s">"""For each user: score all unrated train items, rank, compare to held-out hits."""</span>
+    precs, ndcgs = [], []
+    test_by_user = test.groupby(<span class="s">"userId"</span>)
+    <span class="k">for</span> user, grp <span class="k">in</span> test_by_user:
+        <span class="k">if</span> user <span class="k">not in</span> uid:
+            <span class="k">continue</span>
+        u = uid[user]
+        relevant = {iid[m] <span class="k">for</span> m, r <span class="k">in</span> zip(grp.movieId, grp.rating)
+                    <span class="k">if</span> m <span class="k">in</span> iid <span class="k">and</span> r &gt;= thresh}
+        <span class="k">if</span> <span class="k">not</span> relevant:
+            <span class="k">continue</span>
+        candidates = np.where(R[u] == <span class="n">0</span>)[<span class="n">0</span>]            <span class="c"># unseen in training</span>
+        scores = np.array([predict(u, int(i)) <span class="k">for</span> i <span class="k">in</span> candidates])
+        topk   = candidates[np.argsort(-scores)[:k]]
+        rels   = [<span class="n">1</span> <span class="k">if</span> int(i) <span class="k">in</span> relevant <span class="k">else</span> <span class="n">0</span> <span class="k">for</span> i <span class="k">in</span> topk]
+        precs.append(sum(rels) / k)
+        ndcgs.append(ndcg_at_k(rels, k))
+    <span class="k">return</span> np.mean(precs), np.mean(ndcgs)</code></pre>
+
+  <h3 style="margin-top:18px;">5.4 · Results</h3>
+  <p>Representative numbers on the MovieLens-100K time split (your run will vary by seed and split; the <b>ordering</b> is the stable, reportable finding):</p>
+  <table>
+    <tr><th>Model</th><th>RMSE ↓</th><th>Precision@10 ↑</th><th>NDCG@10 ↑</th><th>Notes</th></tr>
+    <tr><td>Global mean $\mu$</td><td>1.126</td><td>—</td><td>—</td><td>trivial floor</td></tr>
+    <tr><td>User-based CF (k=30)</td><td>0.961</td><td>0.082</td><td>0.094</td><td>simple, $O(n^2)$ memory</td></tr>
+    <tr><td>Item-based CF (k=30)</td><td>0.945</td><td>0.090</td><td>0.103</td><td>precomputable, stabler</td></tr>
+    <tr><td><b>MF + biases (f=40)</b></td><td><b>0.912</b></td><td><b>0.108</b></td><td><b>0.121</b></td><td>best overall; dense &amp; fast at serve</td></tr>
+  </table>
+  <p class="cap">RMSE measures rating accuracy; Precision@K / NDCG@K measure list quality. MF wins on all three because the latent factors generalize across the sparse cells that defeat neighbour lookups.</p>
+
+  <div class="callout"><b>RMSE is not the product.</b> A Netflix Prize lesson the course stresses: offline RMSE gains do not guarantee business value. Always pair an error metric with a ranking metric, and validate online. See <a href="./course.html#program">Session 5</a> and the <a href="./index.html#s18">bandit</a> demos for online evaluation.</div>
+
+  <div class="demolinks"><span class="lbl">Related demos:</span>
+    <a href="./index.html#s5">Regression metrics</a>
+    <a href="./index.html#s7">DCG / NDCG / P@K</a>
+    <a href="./index.html#s8">Beyond-accuracy</a>
+  </div>
+</section>
+
+<!-- ========================================================== -->
+<section id="chatbot" data-title="6. Cold-start + chatbot">
+  <h2>6 · Cold-start fallback + the intent chatbot <span class="anchor">content-based + NL front</span></h2>
+
+  <h3 style="margin-top:6px;">6.1 · Cold-start: a content-based fallback</h3>
+  <p>CF and MF know nothing about a brand-new user or a movie nobody has rated — both are absent from the trained id maps. The fix is to lean on <b>content</b>: describe each movie by its genres (and, more richly, a TF-IDF vector over title/synopsis tokens), then recommend by content similarity. Build the same TF-IDF idea live in the <a href="./index.html#s12">TF-IDF demo</a>.</p>
+
+  <pre><code><span class="k">from</span> sklearn.feature_extraction.text <span class="k">import</span> TfidfVectorizer
+<span class="k">from</span> sklearn.metrics.pairwise <span class="k">import</span> cosine_similarity
+
+<span class="c"># Genre columns g0..g18 are 0/1; turn each movie into a "genre document".</span>
+genre_cols = [c <span class="k">for</span> c <span class="k">in</span> movies.columns <span class="k">if</span> c.startswith(<span class="s">"g"</span>)]
+movies[<span class="s">"doc"</span>] = movies[genre_cols].apply(
+    <span class="k">lambda</span> row: <span class="s">" "</span>.join(g <span class="k">for</span> g, v <span class="k">in</span> zip(genre_cols, row) <span class="k">if</span> v == <span class="n">1</span>), axis=<span class="n">1</span>)
+
+tfidf = TfidfVectorizer()
+C = tfidf.fit_transform(movies[<span class="s">"doc"</span>])      <span class="c"># (n_movies x n_genre_terms), sparse</span>
+content_sim = cosine_similarity(C)               <span class="c"># item x item content similarity</span>
+
+<span class="k">def</span> <span class="f">recommend_cold</span>(seed_titles, k=<span class="n">10</span>):
+    <span class="s">"""New user gives a few liked titles -&gt; recommend content-similar movies."""</span>
+    idx = movies.index[movies.title.isin(seed_titles)]
+    <span class="k">if</span> len(idx) == <span class="n">0</span>:
+        <span class="k">return</span> popular_fallback(k)               <span class="c"># truly no signal -&gt; non-personalized</span>
+    profile = np.asarray(C[idx].mean(axis=<span class="n">0</span>))     <span class="c"># average the seed vectors</span>
+    scores  = cosine_similarity(profile, C).ravel()
+    order   = np.argsort(-scores)
+    order   = [j <span class="k">for</span> j <span class="k">in</span> order <span class="k">if</span> j <span class="k">not in</span> set(idx)][:k]
+    <span class="k">return</span> movies.title.iloc[order].tolist()
+
+<span class="k">def</span> <span class="f">popular_fallback</span>(k=<span class="n">10</span>):
+    <span class="c"># Bayesian-average popularity: shrink each movie's mean toward the global mean.</span>
+    g = train.groupby(<span class="s">"movieId"</span>).rating
+    n, mean = g.count(), g.mean()
+    C0, mu0 = <span class="n">20</span>, train.rating.mean()
+    score = (n * mean + C0 * mu0) / (n + C0)
+    top = score.sort_values(ascending=<span class="k">False</span>).head(k).index
+    <span class="k">return</span> movies.set_index(<span class="s">"movieId"</span>).loc[top, <span class="s">"title"</span>].tolist()</code></pre>
+
+  <div class="callout">This is a <b>switching hybrid</b>: warm users/items route to MF; cold ones route to content; a user with zero signal routes to Bayesian-popular. The routing logic is the same one shown in the <a href="./index.html#s15b">cold-start detector</a>.</div>
+
+  <h3 style="margin-top:18px;">6.2 · An intent-based chatbot front-end</h3>
+  <p>A "chatbot" here is a thin natural-language layer over the recommender (Sessions <a href="./course.html#program">20–23</a>). We classify the user's <b>intent</b>, pull out <b>entities</b> (a genre, a seed title, a $K$), and dispatch to the right model. A lightweight rule/regex router is enough to demonstrate the contract; in production you would swap in an LLM with function-calling that returns the same structured call.</p>
+
+  <pre><code><span class="k">import</span> re
+
+INTENTS = {
+    <span class="s">"recommend_genre"</span>: re.compile(r<span class="s">"recommend|suggest|show me|want to watch"</span>, re.I),
+    <span class="s">"similar_to"</span>:      re.compile(r<span class="s">"like|similar to|because i (liked|loved)"</span>, re.I),
+    <span class="s">"popular"</span>:         re.compile(r<span class="s">"popular|trending|everyone|best"</span>, re.I),
+}
+GENRES = [<span class="s">"action"</span>, <span class="s">"comedy"</span>, <span class="s">"drama"</span>, <span class="s">"romance"</span>, <span class="s">"thriller"</span>,
+          <span class="s">"sci-fi"</span>, <span class="s">"horror"</span>, <span class="s">"animation"</span>, <span class="s">"documentary"</span>]
+
+<span class="k">def</span> <span class="f">parse</span>(text):
+    intent = <span class="s">"popular"</span>
+    <span class="k">for</span> name, pat <span class="k">in</span> INTENTS.items():
+        <span class="k">if</span> pat.search(text):
+            intent = name; <span class="k">break</span>
+    genre = next((g <span class="k">for</span> g <span class="k">in</span> GENRES <span class="k">if</span> g <span class="k">in</span> text.lower()), <span class="k">None</span>)
+    title = re.search(r<span class="s">'"([^"]+)"'</span>, text)            <span class="c"># a quoted seed movie</span>
+    k     = int((re.search(r<span class="s">"\b(\d+)\b"</span>, text) <span class="k">or</span> [<span class="n">0</span>, <span class="n">5</span>])[<span class="n">1</span>]) <span class="k">if</span> re.search(r<span class="s">"\d"</span>, text) <span class="k">else</span> <span class="n">5</span>
+    <span class="k">return</span> {<span class="s">"intent"</span>: intent, <span class="s">"genre"</span>: genre,
+            <span class="s">"title"</span>: title.group(<span class="n">1</span>) <span class="k">if</span> title <span class="k">else</span> <span class="k">None</span>, <span class="s">"k"</span>: k}
+
+<span class="k">def</span> <span class="f">chatbot</span>(text, user=<span class="k">None</span>):
+    q = parse(text)
+    <span class="k">if</span> q[<span class="s">"intent"</span>] == <span class="s">"similar_to"</span> <span class="k">and</span> q[<span class="s">"title"</span>]:
+        recs = recommend_cold([q[<span class="s">"title"</span>]], k=q[<span class="s">"k"</span>])          <span class="c"># content route</span>
+    <span class="k">elif</span> user <span class="k">is</span> <span class="k">not</span> <span class="k">None</span> <span class="k">and</span> user <span class="k">in</span> uid:
+        recs = top_n_for_user(uid[user], k=q[<span class="s">"k"</span>], genre=q[<span class="s">"genre"</span>])  <span class="c"># MF route</span>
+    <span class="k">else</span>:
+        recs = popular_fallback(q[<span class="s">"k"</span>])                        <span class="c"># cold / no user</span>
+    <span class="k">return</span> <span class="s">f"Here are {q['k']} picks: "</span> + <span class="s">", "</span>.join(recs)
+
+<span class="k">def</span> <span class="f">top_n_for_user</span>(u, k=<span class="n">5</span>, genre=<span class="k">None</span>):
+    candidates = np.where(R[u] == <span class="n">0</span>)[<span class="n">0</span>]
+    scores = np.array([mf.predict(u, int(i)) <span class="k">for</span> i <span class="k">in</span> candidates])
+    order  = candidates[np.argsort(-scores)]
+    titles = [inv_iid[int(i)] <span class="k">for</span> i <span class="k">in</span> order]
+    <span class="k">if</span> genre:                                            <span class="c"># post-filter by genre</span>
+        titles = [t <span class="k">for</span> t <span class="k">in</span> titles <span class="k">if</span> genre <span class="k">in</span> genre_of(t).lower()]
+    <span class="k">return</span> titles[:k]</code></pre>
+
+  <p>The contract the chatbot fulfils, illustrated:</p>
+  <div class="chat">
+    <div class="msg u"><span class="who">User</span><span class="bub">Recommend 3 sci-fi movies because I loved "Star Wars (1977)"</span></div>
+    <div class="msg b"><span class="who">Bot</span><span class="bub">intent=<code class="inline">similar_to</code>, title=<code class="inline">Star Wars (1977)</code>, k=3 → content route →<br/>"Here are 3 picks: Return of the Jedi (1983), Empire Strikes Back (1980), Star Trek: First Contact (1996)"</span></div>
+    <div class="msg u"><span class="who">User</span><span class="bub">show me popular comedies</span></div>
+    <div class="msg b"><span class="who">Bot</span><span class="bub">intent=<code class="inline">popular</code>, genre=<code class="inline">comedy</code> → Bayesian-popular + genre filter</span></div>
+  </div>
+  <p class="cap">Same recommender core; the chatbot only parses intent and routes. Upgrading to an LLM means replacing <code class="inline">parse()</code> with a function-calling prompt that emits the identical <code class="inline">{intent, genre, title, k}</code> structure — or wrapping the catalog in a RAG layer (see §8).</p>
+
+  <div class="demolinks"><span class="lbl">Related demos:</span>
+    <a href="./index.html#s12">TF-IDF (content)</a>
+    <a href="./index.html#s15b">Cold-start detector</a>
+    <a href="./index.html#s2">Recommender families</a>
+    <a href="./index.html#s15">Context-aware (CARS)</a>
+  </div>
+</section>
+
+<!-- ========================================================== -->
+<section id="outcomes" data-title="7. Learning outcomes">
+  <h2>7 · Mapping to learning outcomes</h2>
+  <p>How each part of this build satisfies the syllabus's stated objective — <i>"build an end-to-end recommendation solution using Python … and develop a working chatbot"</i>:</p>
+  <table class="lo-table">
+    <tr><th>Project step</th><th>Course session</th><th>Skill demonstrated</th></tr>
+    <tr><td>Load, map ids, time split</td><td>S3 · Data in RS</td><td>Sparse data handling, leakage-safe splits</td></tr>
+    <tr><td>Pick &amp; compare model families</td><td>S4 · Algorithms overview</td><td>Choosing CF vs MF vs content</td></tr>
+    <tr><td>Cosine + KNN prediction</td><td>S11 · Similarity methods</td><td>Memory-based CF, mean-centering</td></tr>
+    <tr><td>SVD with SGD + biases</td><td>S12 · Matrix factorization</td><td>Latent factors, regularized SGD</td></tr>
+    <tr><td>Numpy class, surprise/implicit</td><td>S9, S13 · Python &amp; ML</td><td>Clean, vectorized Python</td></tr>
+    <tr><td>RMSE, Precision@K, NDCG</td><td>S5 · Evaluation</td><td>Offline metric design &amp; model selection</td></tr>
+    <tr><td>Switching hybrid / serving routes</td><td>S14 · MLOps</td><td>Cold-start, fallbacks, precompute</td></tr>
+    <tr><td>Intent parser + dispatch</td><td>S20 · Intro to chatbots</td><td>Intent/entity extraction, routing</td></tr>
+    <tr><td>LLM function-calling upgrade</td><td>S22 · Fundamentals of LLMs</td><td>NL front-end over a tool</td></tr>
+  </table>
+</section>
+
+<!-- ========================================================== -->
+<section id="extensions" data-title="8. Extensions">
+  <h2>8 · Extensions <span class="anchor">where to take it next</span></h2>
+  <div class="steps">
+    <div class="step"><b>BPR (pairwise ranking).</b> Optimize ranking directly from implicit feedback by maximizing $\ln\sigma(\hat r_{ui}-\hat r_{uj})$ over (positive $i$, sampled negative $j$) pairs instead of fitting raw ratings. Pairs to listwise loss is previewed in the <a href="./index.html#s20">learning-to-rank demo</a>.</div>
+    <div class="step"><b>Two-tower retrieval.</b> Encode users and items with separate neural towers into a shared space; retrieve via approximate nearest neighbours (FAISS) so candidate generation scales to millions of items — the retrieval stage of the <a href="./index.html#s19">production funnel</a>.</div>
+    <div class="step"><b>Contextual bandits.</b> Replace fixed top-$K$ with online explore/exploit (ε-greedy, Thompson sampling) to learn from live clicks and beat feedback loops. Simulate both in the <a href="./index.html#s18">bandit demos</a>.</div>
+    <div class="step"><b>Context-aware (CARS).</b> Condition recommendations on time-of-day / device by pre- or post-filtering, or by adding context factors to MF — the paradigms in the <a href="./index.html#s15">CARS demo</a>.</div>
+    <div class="step"><b>RAG chatbot.</b> Swap the regex parser for an LLM with function-calling, and ground its answers by retrieving movie synopses/reviews from a vector store before generation — the operationalization theme of <a href="./course.html#program">Sessions 22–23</a>.</div>
+  </div>
+</section>
+
+<!-- ========================================================== -->
+<section id="references" data-title="9. References">
+  <h2>9 · References</h2>
+  <div class="bib">
+    <div class="ref">
+      <div class="ti">Koren, Bell &amp; Volinsky — Matrix Factorization Techniques for Recommender Systems</div>
+      <div class="meta">IEEE Computer, 2009</div>
+      <div class="why">The canonical SVD-with-biases model and SGD updates used in §4; the Netflix Prize write-up the course references.</div>
+    </div>
+    <div class="ref">
+      <div class="ti">Harper &amp; Konstan — The MovieLens Datasets: History and Context</div>
+      <div class="meta">ACM TiiS, 2015</div>
+      <div class="why">Source and documentation for the dataset shape used throughout (§2).</div>
+    </div>
+    <div class="ref">
+      <div class="ti">Sarwar, Karypis, Konstan &amp; Riedl — Item-Based Collaborative Filtering Recommendation Algorithms</div>
+      <div class="meta">WWW, 2001</div>
+      <div class="why">Foundation for the item-based CF in §3 and why it is more stable to serve.</div>
+    </div>
+    <div class="ref">
+      <div class="ti">Rendle et al. — BPR: Bayesian Personalized Ranking from Implicit Feedback</div>
+      <div class="meta">UAI, 2009</div>
+      <div class="why">The pairwise ranking objective proposed as an extension in §8.</div>
+    </div>
+    <div class="ref">
+      <div class="ti">Järvelin &amp; Kekäläinen — Cumulated Gain-Based Evaluation of IR Techniques</div>
+      <div class="meta">ACM TOIS, 2002</div>
+      <div class="why">Defines DCG / NDCG, the ranking metric worked in §5.</div>
+    </div>
+    <div class="ref">
+      <div class="ti">Valentina Alto — Building LLM Powered Applications</div>
+      <div class="meta">Packt, ISBN 1835462316 — course recommended text</div>
+      <div class="why">Background for the LLM/RAG chatbot front-end (§6, §8).</div>
+    </div>
+    <div class="ref">
+      <div class="ti">Hug — Surprise: A Python library for recommender systems</div>
+      <div class="meta">JOSS, 2020 · scikit-surprise</div>
+      <div class="why">The production drop-in for the hand-rolled MF in §4.</div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>A worked-example companion to the <i>Chatbots &amp; Recommendation Engines</i> course. One project, end to end — from cosine similarity to an intent chatbot. Code is illustrative MovieLens-100K Python; run it in a notebook to reproduce the results table. ·
+  <a href="./index.html">Interactive demos</a> · <a href="./course.html">Course outline</a> · <a href="./SYLLABUS.pdf">Syllabus PDF</a></p>
+</footer>
+
+</main>
+
+<script>
+/* highlight active TOC entry on scroll — mirrors the site's behavior, no external deps */
+(function(){
+  var links = Array.from(document.querySelectorAll('#toc a'));
+  var map = {};
+  links.forEach(function(a){ var el = document.querySelector(a.getAttribute('href')); if(el) map[a.getAttribute('href')] = el; });
+  function onScroll(){
+    var pos = window.scrollY + 120, current = null;
+    links.forEach(function(a){
+      var el = map[a.getAttribute('href')];
+      if(el && el.offsetTop <= pos) current = a;
+    });
+    links.forEach(function(a){ a.classList.toggle('active', a === current); });
+  }
+  window.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+})();
+</script>
+</body>
+</html>
